@@ -7,11 +7,11 @@
 set -euo pipefail
 
 APP="$(basename "$PWD")"            # breakout, foxhunt, beacon, fm, ...
-APP_NAME="APRS RX"                  # <-- the only per-app line
-APP_VER="1.0"
+APP_NAME="APRS RX F4IAE"             # <-- the only per-app line
+APP_VER="1.1"
 APP_API_MIN=3
 APP_VMA=${APP_VMA:-0x20000280}      # pinned overlay VMA (Core/py32f071xb.ld)
-OUT="${APP_NAME// /}"               # blob basename ("Broadcast FM" -> BroadcastFM)
+OUT="aprsrx"                        # blob basename: keep as aprsrx to replace official
 
 CC=/opt/toolchain/bin/arm-none-eabi-gcc
 OBJCOPY=/opt/toolchain/bin/arm-none-eabi-objcopy
@@ -30,8 +30,8 @@ trap 'printf "\r  ❌ %-13s build failed            \n" "$APP_NAME"' ERR
 
 step 1 assets  ; APP_VER="$APP_VER" python3 ./gen_assets.py "${APP}_assets.bin" "${APP}_assets.h"
 # A failed link (4 KiB overflow) leaves no ELF: keep an object to disassemble.
-step 2 compile ; "$CC" $CFLAGS $LDFLAGS "${APP}_app.c" -lgcc -o "${APP}.elf" \
-                   || { "$CC" $CFLAGS -c "${APP}_app.c" -o "${APP}.o"; false; }
+step 2 compile ; "$CC" $CFLAGS $LDFLAGS "${APP}_app_minimal.c" -lgcc -o "${APP}.elf" \
+                   || { "$CC" $CFLAGS -c "${APP}_app_minimal.c" -o "${APP}.o"; false; }
 step 3 objcopy ; "$OBJCOPY" -O binary "${APP}.elf" "${APP}.bin"
 step 4 pack    ; python3 ../pack_app.py "${APP}.bin" "${OUT}.app" \
                    --name "$APP_NAME" --ver "$APP_VER" --api-min "$APP_API_MIN" --vma "${APP_VMA}" \

@@ -358,6 +358,9 @@ void UI_DisplayWelcome(void)
         #endif
         */
 
+        // F4IAE Custom info - display under version banner
+        UI_PrintStringSmallNormal("F4IAE Custom v0.1", 0, 127, 5);
+        
         sprintf(WelcomeString3, "%s Edition", Edition);
         UI_PrintStringSmallNormal(WelcomeString3, 0, 127, 6);
 

@@ -33,6 +33,7 @@ target_sources(App INTERFACE
     dcs.c
     font.c
     frequencies.c
+    freq_manager.c
     functions.c
     helper/battery.c
     helper/boot.c

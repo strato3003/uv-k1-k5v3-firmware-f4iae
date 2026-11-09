@@ -24,6 +24,7 @@
 #include "driver/bk1080.h"
 #include "driver/bk4819.h"
 #include "driver/py25q16.h"
+#include "freq_manager.h"
 #include "misc.h"
 #include "settings.h"
 #include "ui/menu.h"
@@ -532,6 +533,9 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         // And set special session settings for actions
         gSetting_set_ptt_session = gSetting_set_ptt;
     #endif
+
+    // Initialize frequency manager
+    FREQ_MANAGER_Init();
 }
 
 void SETTINGS_LoadCalibration(void)
