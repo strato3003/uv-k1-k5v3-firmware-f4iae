@@ -33,6 +33,7 @@
 #include "aprsrx_assets.h"
 
 #define APRSRX_VERSION "v1.2"
+#define NUM_MR_CHANNELS 28
 
 /* Global state */
 static struct {
@@ -44,6 +45,38 @@ static struct {
     uint32_t selected_freq;
     char freq_desc[20];
 } g;
+
+/* Memory channel names - customize these to match your configured memories */
+static const char *mr_names[NUM_MR_CHANNELS] = {
+    "APRS 144.800",   // MR 1
+    "APRS 144.390",   // MR 2
+    "FM 433.650",     // MR 3
+    "DMR 145.000",    // MR 4
+    "APRS 432.500",   // MR 5
+    "FM 145.500",     // MR 6
+    "Test 1",         // MR 7
+    "Test 2",         // MR 8
+    "MR 9",           // MR 9
+    "MR 10",          // MR 10
+    "MR 11",          // MR 11
+    "MR 12",          // MR 12
+    "MR 13",          // MR 13
+    "MR 14",          // MR 14
+    "MR 15",          // MR 15
+    "MR 16",          // MR 16
+    "MR 17",          // MR 17
+    "MR 18",          // MR 18
+    "MR 19",          // MR 19
+    "MR 20",          // MR 20
+    "MR 21",          // MR 21
+    "MR 22",          // MR 22
+    "MR 23",          // MR 23
+    "MR 24",          // MR 24
+    "MR 25",          // MR 25
+    "MR 26",          // MR 26
+    "MR 27",          // MR 27
+    "MR 28"           // MR 28
+};
 
 /* Freestanding helpers - no libc available in overlay */
 void *memset(void *d, int c, size_t n) {
@@ -59,15 +92,8 @@ size_t strlen(const char *s) {
     return len;
 }
 
-/* Frequency menu items */
-static const char *freq_menu_items[] = {
-    "VFO",
-    "MR 1", "MR 2", "MR 3", "MR 4", "MR 5", "MR 6", "MR 7", "MR 8",
-    "MR 9", "MR 10", "MR 11", "MR 12", "MR 13", "MR 14", "MR 15",
-    "MR 16", "MR 17", "MR 18", "MR 19", "MR 20", "MR 21",
-    "MR 22", "MR 23", "MR 24", "MR 25", "MR 26", "MR 27", "MR 28"
-};
-#define NUM_FREQ_ITEMS (sizeof(freq_menu_items) / sizeof(freq_menu_items[0]))
+/* Frequency menu items - VFO + MR 1-28 with customizable names */
+#define NUM_FREQ_ITEMS (1 + NUM_MR_CHANNELS)  /* VFO + 28 MR channels */
 
 /* Format frequency as string */
 static void format_freq(uint32_t freq_10hz, char *buf) {
@@ -114,10 +140,16 @@ static void draw_freq_menu(void) {
     /* Display menu items */
     for (uint8_t i = g.scroll; i < g.scroll + 4 && i < NUM_FREQ_ITEMS; i++) {
         uint8_t line = 1 + (i - g.scroll);
-        if (i == g.selected_item) {
-            A->print_inverse(freq_menu_items[i], 0, line, false, true, 127);
+        const char *label;
+        if (i == 0) {
+            label = "VFO";
         } else {
-            A->print_normal(freq_menu_items[i], 0, 127, line);
+            label = mr_names[i - 1];  /* MR 1-28 are at indices 1-28 */
+        }
+        if (i == g.selected_item) {
+            A->print_inverse(label, 0, line, false, true, 127);
+        } else {
+            A->print_normal(label, 0, 127, line);
         }
     }
     
@@ -151,19 +183,39 @@ static void draw_screen(void) {
     
     /* Display selected frequency */
     char freq_str[20];
-    if (g.selected_freq > 0) {
-        format_freq(g.selected_freq, freq_str);
+    if (g.selected_item == 0) {
+        /* VFO selected */
+        uint32_t current_freq = A->rx_freq();
+        format_freq(current_freq, freq_str);
         char line[30];
         char *p = line;
         char *f = freq_str;
         while (*f && p < line + sizeof(line) - 1) *p++ = *f++;
-        *p++ = ' ';
-        *p++ = 'M';
-        *p++ = 'H';
-        *p++ = 'z';
         *p = '\0';
         A->print_normal(line, 0, 127, 2);
-        A->print_normal(g.freq_desc, 0, 127, 3);
+        A->print_normal("VFO", 0, 127, 3);
+    } else if (g.selected_item <= NUM_MR_CHANNELS) {
+        /* MR channel selected */
+        char line[30];
+        char *p = line;
+        /* Copy MR name */
+        const char *name = mr_names[g.selected_item - 1];
+        while (*name && p < line + sizeof(line) - 1) *p++ = *name++;
+        *p = '\0';
+        A->print_normal(line, 0, 127, 2);
+        /* Show MR number */
+        char mr_line[10];
+        mr_line[0] = 'M';
+        mr_line[1] = 'R';
+        mr_line[2] = ' ';
+        mr_line[3] = (char)('0' + g.selected_item);
+        if (g.selected_item < 10) {
+            mr_line[4] = '\0';
+        } else {
+            mr_line[4] = (char)('0' + (g.selected_item % 10));
+            mr_line[5] = '\0';
+        }
+        A->print_normal(mr_line, 0, 127, 3);
     } else {
         A->print_normal("No frequency selected", 0, 127, 2);
         A->print_normal("Press MENU to select", 0, 127, 3);

@@ -1,34 +1,54 @@
-Labs_f4iae Firmware with Frequency Manager
-==========================================
+APRS RX with Frequency Selection Menu
+======================================
 
-This release includes:
+This release includes a modified APRS RX app with integrated frequency selection.
 
-1. Labs_f4iae_firmware.bin (114 KB)
-   - Based on F4HWN fieldops v6.3.0
-   - Includes freq_manager module for frequency and app-family management
-   - Note: This is a pre-built binary. To rebuild with custom settings:
-     * Run: ./compile-firmware.sh Labs
-     * Or use CMake with ENABLE_FEAT_F4HWN=ON
+Files:
+------
+1. Labs_f4iae_firmware.bin (111 KB) - Firmware (optional, for reference)
+2. aprsrx.app (1.7 KB) - Modified APRS RX app with frequency menu
+3. freqmanager.app (3.4 KB) - Original freqmanager app (kept for reference)
 
-2. freqmanager.app (3.5 KB)
-   - Overlay app for managing frequencies and app-families
-   - Fits within 4 KB RAM limit (84% utilization)
-   - Navigation: UP/DOWN to move, MENU to select, EXIT to go back
-   - Input: Numpad (0-9) for frequencies, UP/DOWN for text character selection
+APRS RX App - New Features:
+---------------------------
+At startup, the app displays a frequency selection menu with:
+- VFO (current frequency)
+- MR 1 through MR 28 (28 memory channels) with CUSTOMIZABLE labels
+
+Navigation:
+- UP/DOWN: Scroll through frequency list
+- MENU: Select frequency and start APRS RX
+- EXIT: Cancel and return to app menu
+
+After selection:
+- The app displays the selected frequency NAME and NUMBER
+- Press MENU again to reopen the frequency menu
+- Press EXIT to return to app menu
+
+Customizing Memory Names:
+------------------------
+The memory channel names are defined in aprsrx_app_minimal.c as:
+
+static const char *mr_names[NUM_MR_CHANNELS] = {
+    "APRS 144.800",   // MR 1
+    "APRS 144.390",   // MR 2
+    ...
+    "MR 28"           // MR 28
+};
+
+Edit this array to match your actual memory channel names configured via
+k5k1prog-mac or other tools.
 
 Installation:
------------
-1. Flash Labs_f4iae_firmware.bin to your radio using your preferred method
-2. Install freqmanager.app using UV Studio or similar tool
-3. Access via F+7 -> Select FREQMANAGER from the apps menu
+------------
+1. Install aprsrx.app using UV Studio or similar tool
+2. Run the app from the apps menu (F+7)
+3. Select your desired frequency from the list
 
-Features:
----------
-- Manage frequency list (category, frequency, description)
-- Manage app-family associations (category, app_name)
-- Add/Remove/Edit/List operations for both lists
-- Text input with character cycling using UP/DOWN keys
-- Persistent storage in EEPROM
-
-Note: The firmware binary provided is based on fieldops v6.3.0 which includes
-all the necessary modifications for the Frequency Manager system.
+Technical Details:
+----------------
+- App size: 1684 bytes (41% of 4 KB limit)
+- Menu displays 4 items at a time with scroll indicators
+- Default selection: VFO (index 0)
+- Memory channels: MR 1-28 (indices 1-28)
+- Customizable labels for each memory channel
