@@ -15,14 +15,16 @@
  */
 
 /**
- * APRS RX - Minimal version for frequency selection
+ * APRS RX - Minimal version with frequency selection menu
  * 
- * This minimal version only displays frequency information and allows
- * selecting a frequency via the FreqManager app.
+ * This version displays a frequency selection menu at startup:
+ * - VFO (current frequency)
+ * - MR 1-28 (memory channels)
  * 
  * Navigation:
- * - MENU: Open FreqManager to select frequency
- * - EXIT: Return to app menu
+ * - UP/DOWN: Select frequency
+ * - MENU: Confirm selection and start app
+ * - EXIT: Cancel and return to app menu
  */
 
 #include <stdint.h>
@@ -30,12 +32,15 @@
 #include "../app_api.h"
 #include "aprsrx_assets.h"
 
-#define APRSRX_VERSION "v1.1"
+#define APRSRX_VERSION "v1.2"
 
 /* Global state */
 static struct {
     const app_api_t *api;
     bool running;
+    bool in_freq_menu;
+    uint8_t selected_item;  /* 0 = VFO, 1-28 = MR 1-28 */
+    uint8_t scroll;
     uint32_t selected_freq;
     char freq_desc[20];
 } g;
@@ -48,6 +53,21 @@ void *memcpy(void *d, const void *s, size_t n) {
     uint8_t *p = d; const uint8_t *q = s;
     while (n) { --n; p[n] = q[n]; } return d;
 }
+size_t strlen(const char *s) {
+    size_t len = 0;
+    while (s[len]) len++;
+    return len;
+}
+
+/* Frequency menu items */
+static const char *freq_menu_items[] = {
+    "VFO",
+    "MR 1", "MR 2", "MR 3", "MR 4", "MR 5", "MR 6", "MR 7", "MR 8",
+    "MR 9", "MR 10", "MR 11", "MR 12", "MR 13", "MR 14", "MR 15",
+    "MR 16", "MR 17", "MR 18", "MR 19", "MR 20", "MR 21",
+    "MR 22", "MR 23", "MR 24", "MR 25", "MR 26", "MR 27", "MR 28"
+};
+#define NUM_FREQ_ITEMS (sizeof(freq_menu_items) / sizeof(freq_menu_items[0]))
 
 /* Format frequency as string */
 static void format_freq(uint32_t freq_10hz, char *buf) {
@@ -81,7 +101,45 @@ static void format_freq(uint32_t freq_10hz, char *buf) {
     }
 }
 
-/* Draw the screen */
+/* Draw frequency selection menu */
+static void draw_freq_menu(void) {
+    const app_api_t *A = g.api;
+    
+    A->display_clear();
+    A->status_clear();
+    
+    /* Title */
+    A->print_inverse("Select Frequency", 0, 0, false, true, 127);
+    
+    /* Display menu items */
+    for (uint8_t i = g.scroll; i < g.scroll + 4 && i < NUM_FREQ_ITEMS; i++) {
+        uint8_t line = 1 + (i - g.scroll);
+        if (i == g.selected_item) {
+            A->print_inverse(freq_menu_items[i], 0, line, false, true, 127);
+        } else {
+            A->print_normal(freq_menu_items[i], 0, 127, line);
+        }
+    }
+    
+    /* Scroll indicators */
+    if (g.scroll > 0) {
+        A->print_tiny("^", 120, 8, false, false);
+    }
+    if (g.scroll + 4 < (uint8_t)NUM_FREQ_ITEMS) {
+        A->print_tiny("v", 120, 34, false, false);
+    }
+    
+    /* Footer */
+    A->print_tiny("MENU:Select", 0, 50, false, false);
+    A->print_tiny("EXIT:Cancel", 70, 50, false, false);
+    A->print_tiny(APRSRX_VERSION, 110, 50, false, false);
+    
+    A->draw_battery();
+    A->blit_status();
+    A->blit_full();
+}
+
+/* Draw the main screen */
 static void draw_screen(void) {
     const app_api_t *A = g.api;
     
@@ -91,7 +149,7 @@ static void draw_screen(void) {
     /* Title */
     A->print_inverse("APRS RX F4IAE", 0, 0, false, true, 127);
     
-    /* Frequency info */
+    /* Display selected frequency */
     char freq_str[20];
     if (g.selected_freq > 0) {
         format_freq(g.selected_freq, freq_str);
@@ -112,7 +170,7 @@ static void draw_screen(void) {
     }
     
     /* Footer */
-    A->print_tiny("MENU:Select Freq", 0, 50, false, false);
+    A->print_tiny("MENU:Freq Menu", 0, 50, false, false);
     A->print_tiny("EXIT:Back", 80, 50, false, false);
     A->print_tiny(APRSRX_VERSION, 110, 50, false, false);
     
@@ -121,24 +179,45 @@ static void draw_screen(void) {
     A->blit_full();
 }
 
-/* Handle key presses */
-static void handle_keys(void) {
+/* Handle key presses in frequency menu */
+static void handle_freq_menu_keys(void) {
     uint8_t key = g.api->get_key();
     
     if (key == APP_KEY_INVALID) return;
     
-    switch (key) {
-        case APP_KEY_MENU:
-            /* Open freqmanager app to select frequency for APRS RX */
-            g.api->handoff("FREQMANAGER", "APRS RX", 8);
-            break;
-            
-        case APP_KEY_EXIT:
-            g.running = false;
-            break;
-            
-        default:
-            break;
+    if (key == APP_KEY_UP) {
+        if (g.selected_item > 0) {
+            g.selected_item--;
+            if (g.selected_item < g.scroll) g.scroll = g.selected_item;
+        }
+    } else if (key == APP_KEY_DOWN) {
+        if (g.selected_item < NUM_FREQ_ITEMS - 1) {
+            g.selected_item++;
+            if (g.selected_item >= g.scroll + 4) g.scroll = g.selected_item - 3;
+        }
+    } else if (key == APP_KEY_MENU) {
+        /* Selection confirmed - exit menu */
+        g.in_freq_menu = false;
+    } else if (key == APP_KEY_EXIT) {
+        /* Cancel - exit app */
+        g.running = false;
+        g.in_freq_menu = false;
+    }
+}
+
+/* Handle key presses in main app */
+static void handle_main_keys(void) {
+    uint8_t key = g.api->get_key();
+    
+    if (key == APP_KEY_INVALID) return;
+    
+    if (key == APP_KEY_MENU) {
+        /* Open frequency selection menu */
+        g.in_freq_menu = true;
+        g.selected_item = 0;  /* Default to VFO */
+        g.scroll = 0;
+    } else if (key == APP_KEY_EXIT) {
+        g.running = false;
     }
 }
 
@@ -147,31 +226,25 @@ __attribute__((section(".text.entry"),used))
 void app_main(const app_api_t *api) {
     g.api = api;
     g.running = true;
+    g.in_freq_menu = false;
+    g.selected_item = 0;
+    g.scroll = 0;
     g.selected_freq = 0;
     g.freq_desc[0] = '\0';
     
-    /* Try to read selected frequency from handoff (if called from freqmanager) */
-    uint8_t handoff_data[32];
-    uint16_t len = api->handoff_read(handoff_data, sizeof(handoff_data), NULL);
-    if (len >= sizeof(uint32_t)) {
-        memcpy(&g.selected_freq, handoff_data, sizeof(uint32_t));
-        if (len > sizeof(uint32_t)) {
-            memcpy(g.freq_desc, handoff_data + sizeof(uint32_t), 
-                   sizeof(g.freq_desc) - 1);
-            g.freq_desc[sizeof(g.freq_desc) - 1] = '\0';
-        } else {
-            const char *sel = "Selected";
-            for (int i = 0; i < sizeof(g.freq_desc) - 1 && sel[i]; i++) {
-                g.freq_desc[i] = sel[i];
-            }
-            g.freq_desc[sizeof(g.freq_desc) - 1] = '\0';
-        }
-    }
+    /* Show frequency selection menu at startup */
+    g.in_freq_menu = true;
+    g.selected_item = 0;  /* VFO */
+    g.scroll = 0;
     
-    /* Main loop */
     while (g.running) {
-        handle_keys();
-        draw_screen();
+        if (g.in_freq_menu) {
+            handle_freq_menu_keys();
+            draw_freq_menu();
+        } else {
+            handle_main_keys();
+            draw_screen();
+        }
         api->delay_ms(50);
     }
 }
