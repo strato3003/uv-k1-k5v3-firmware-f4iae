@@ -19,7 +19,7 @@
  * 
  * This version displays a frequency selection menu at startup:
  * - VFO (current frequency)
- * - MR 1-28 (memory channels)
+ * - MR 1-28 (memory channels) with CUSTOMIZABLE labels
  * 
  * Navigation:
  * - UP/DOWN: Select frequency
@@ -34,6 +34,7 @@
 
 #define APRSRX_VERSION "v1.2"
 #define NUM_MR_CHANNELS 28
+#define NUM_FREQ_ITEMS (1 + NUM_MR_CHANNELS)  /* VFO + 28 MR channels */
 
 /* Global state */
 static struct {
@@ -42,6 +43,7 @@ static struct {
     bool in_freq_menu;
     uint8_t selected_item;  /* 0 = VFO, 1-28 = MR 1-28 */
     uint8_t scroll;
+    uint8_t prevKey;        /* For key repeat handling */
     uint32_t selected_freq;
     char freq_desc[20];
 } g;
@@ -86,14 +88,6 @@ void *memcpy(void *d, const void *s, size_t n) {
     uint8_t *p = d; const uint8_t *q = s;
     while (n) { --n; p[n] = q[n]; } return d;
 }
-size_t strlen(const char *s) {
-    size_t len = 0;
-    while (s[len]) len++;
-    return len;
-}
-
-/* Frequency menu items - VFO + MR 1-28 with customizable names */
-#define NUM_FREQ_ITEMS (1 + NUM_MR_CHANNELS)  /* VFO + 28 MR channels */
 
 /* Format frequency as string */
 static void format_freq(uint32_t freq_10hz, char *buf) {
@@ -161,12 +155,11 @@ static void draw_freq_menu(void) {
         A->print_tiny("v", 120, 34, false, false);
     }
     
-    /* Footer */
-    A->print_tiny("MENU:Select", 0, 50, false, false);
-    A->print_tiny("EXIT:Cancel", 70, 50, false, false);
-    A->print_tiny(APRSRX_VERSION, 110, 50, false, false);
+    /* Footer - show selection instruction */
+    A->print_tiny("UP/DN:Move", 0, 50, false, false);
+    A->print_tiny("MENU:Select", 50, 50, false, false);
+    A->print_tiny("EXIT:Cancel", 100, 50, false, false);
     
-    A->draw_battery();
     A->blit_status();
     A->blit_full();
 }
@@ -187,32 +180,25 @@ static void draw_screen(void) {
         /* VFO selected */
         uint32_t current_freq = A->rx_freq();
         format_freq(current_freq, freq_str);
-        char line[30];
-        char *p = line;
-        char *f = freq_str;
-        while (*f && p < line + sizeof(line) - 1) *p++ = *f++;
-        *p = '\0';
-        A->print_normal(line, 0, 127, 2);
+        A->print_normal(freq_str, 0, 127, 2);
         A->print_normal("VFO", 0, 127, 3);
     } else if (g.selected_item <= NUM_MR_CHANNELS) {
         /* MR channel selected */
-        char line[30];
-        char *p = line;
-        /* Copy MR name */
-        const char *name = mr_names[g.selected_item - 1];
-        while (*name && p < line + sizeof(line) - 1) *p++ = *name++;
-        *p = '\0';
-        A->print_normal(line, 0, 127, 2);
+        A->print_normal(mr_names[g.selected_item - 1], 0, 127, 2);
         /* Show MR number */
         char mr_line[10];
-        mr_line[0] = 'M';
-        mr_line[1] = 'R';
-        mr_line[2] = ' ';
-        mr_line[3] = (char)('0' + g.selected_item);
         if (g.selected_item < 10) {
+            mr_line[0] = 'M';
+            mr_line[1] = 'R';
+            mr_line[2] = ' ';
+            mr_line[3] = (char)('0' + g.selected_item);
             mr_line[4] = '\0';
         } else {
-            mr_line[4] = (char)('0' + (g.selected_item % 10));
+            mr_line[0] = 'M';
+            mr_line[1] = 'R';
+            mr_line[2] = ' ';
+            mr_line[3] = (char)('0' + g.selected_item / 10);
+            mr_line[4] = (char)('0' + g.selected_item % 10);
             mr_line[5] = '\0';
         }
         A->print_normal(mr_line, 0, 127, 3);
@@ -235,21 +221,32 @@ static void draw_screen(void) {
 static void handle_freq_menu_keys(void) {
     uint8_t key = g.api->get_key();
     
-    if (key == APP_KEY_INVALID) return;
+    /* Skip if no key or same as previous (key repeat) */
+    if (key == APP_KEY_INVALID || key == g.prevKey) {
+        g.prevKey = key;
+        return;
+    }
+    
+    g.prevKey = key;
     
     if (key == APP_KEY_UP) {
         if (g.selected_item > 0) {
             g.selected_item--;
-            if (g.selected_item < g.scroll) g.scroll = g.selected_item;
+            if (g.selected_item < g.scroll) {
+                g.scroll = g.selected_item;
+            }
         }
     } else if (key == APP_KEY_DOWN) {
         if (g.selected_item < NUM_FREQ_ITEMS - 1) {
             g.selected_item++;
-            if (g.selected_item >= g.scroll + 4) g.scroll = g.selected_item - 3;
+            if (g.selected_item >= g.scroll + 4) {
+                g.scroll = g.selected_item - 3;
+            }
         }
     } else if (key == APP_KEY_MENU) {
         /* Selection confirmed - exit menu */
         g.in_freq_menu = false;
+        g.prevKey = APP_KEY_INVALID;  /* Reset for main menu */
     } else if (key == APP_KEY_EXIT) {
         /* Cancel - exit app */
         g.running = false;
@@ -261,12 +258,17 @@ static void handle_freq_menu_keys(void) {
 static void handle_main_keys(void) {
     uint8_t key = g.api->get_key();
     
-    if (key == APP_KEY_INVALID) return;
+    /* Skip if no key or same as previous */
+    if (key == APP_KEY_INVALID || key == g.prevKey) {
+        g.prevKey = key;
+        return;
+    }
+    
+    g.prevKey = key;
     
     if (key == APP_KEY_MENU) {
         /* Open frequency selection menu */
         g.in_freq_menu = true;
-        g.selected_item = 0;  /* Default to VFO */
         g.scroll = 0;
     } else if (key == APP_KEY_EXIT) {
         g.running = false;
@@ -278,16 +280,12 @@ __attribute__((section(".text.entry"),used))
 void app_main(const app_api_t *api) {
     g.api = api;
     g.running = true;
-    g.in_freq_menu = false;
-    g.selected_item = 0;
+    g.in_freq_menu = true;  /* Start in frequency menu */
+    g.selected_item = 0;    /* Default to VFO */
     g.scroll = 0;
+    g.prevKey = APP_KEY_INVALID;
     g.selected_freq = 0;
     g.freq_desc[0] = '\0';
-    
-    /* Show frequency selection menu at startup */
-    g.in_freq_menu = true;
-    g.selected_item = 0;  /* VFO */
-    g.scroll = 0;
     
     while (g.running) {
         if (g.in_freq_menu) {
