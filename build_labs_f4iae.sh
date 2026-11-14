@@ -15,6 +15,7 @@ VERSION_STRING="v6.3.0" \
 # Build firmware
 ./compile-firmware.sh \
     -D ENABLE_FEAT_F4HWN=ON \
+    -D ENABLE_UART=ON \
     -D AUTHOR_STRING_1="$AUTHOR_STRING_1" \
     -D AUTHOR_STRING_2="$AUTHOR_STRING_2" \
     -D VERSION_STRING_1="$VERSION_STRING_1" \

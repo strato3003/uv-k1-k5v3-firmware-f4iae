@@ -1,0 +1,312 @@
+/* Copyright 2026 JN Martineau F4IAE
+ * https://github.com/jnmartineau
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     Unless required by applicable law or agreed to in writing, software
+ *     distributed under the License is distributed on an "AS IS" BASIS,
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     See the License for the specific language governing permissions and
+ *     limitations under the License.
+ */
+
+/**
+ * Memo App - Frequency Selector
+ * 
+ * Displays list of configured frequencies with short labels from uvk5-freq.csv
+ * Allows selection using UP/DOWN keys
+ * Shows: Name - Frequency on each menu line
+ * 
+ * Navigation:
+ * - UP/DOWN: Select frequency
+ * - MENU: Confirm selection
+ * - EXIT: Return to app menu
+ */
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "../app_api.h"
+
+#define MEMO_VERSION "v1.0"
+#define NUM_FREQ_ITEMS 28
+
+/* Global state */
+static struct {
+    const app_api_t *api;
+    bool running;
+    bool in_menu;
+    uint8_t selected_item;
+    uint8_t scroll;
+    uint8_t prevKey;        /* For key repeat handling */
+} g;
+
+/* Freestanding helpers - no libc available in overlay */
+void *memset(void *d, int c, size_t n) {
+    uint8_t *p = d; while (n) p[--n] = (uint8_t)c; return d;
+}
+void *memcpy(void *d, const void *s, size_t n) {
+    uint8_t *p = d; const uint8_t *q = s;
+    while (n) { --n; p[n] = q[n]; } return d;
+}
+
+/* Frequency data from uvk5-freq.csv - First 28 entries
+ * Format: "ShortName, FreqMHz"
+ * Max length: ~20 chars per line to fit on display
+ */
+static const char *freq_items[NUM_FREQ_ITEMS] = {
+    "RASEC85,145.475",     // 1
+    "RASEC85B,145.212",    // 2
+    "TACTUHF,444.625",     // 3
+    "INTERSV,157.575",     // 4
+    "F5ZWP_U,439.612",     // 5
+    "F5ZWQ_U,430.212",     // 6
+    "F1ZOQRX,430.475",     // 7
+    "APRS,144.800",        // 8
+    "HF3760,3.760",        // 9
+    "HF7110,7.110",        // 10
+    "HF14300,14.300",      // 11
+    "DETRESSE,121.500",    // 12
+    "MIL243,243.000",      // 13
+    "SAR406A,406.025",     // 14
+    "SAR406B,406.037",     // 15
+    "VHF16,156.800",       // 16
+    "VHF13,156.650",       // 17
+    "VHF70,156.525",       // 18
+    "VHF9,156.450",        // 19
+    "VHF80,156.025",       // 20
+    "AIS1,161.975",        // 21
+    "AIS2,162.025",        // 22
+    "NT-ATIS,126.930",     // 23
+    "NT-TWR,118.655",      // 24
+    "NT-SOL,121.655",      // 25
+    "NT-APP,124.250",      // 26
+    "RY-AFIS,119.905",     // 27
+    "LS-AFIS,123.350"      // 28
+};
+
+/* Draw frequency selection menu with tiny font and 2 columns */
+static void draw_menu(void) {
+    const app_api_t *A = g.api;
+    
+    A->display_clear();
+    A->status_clear();
+    
+    /* Title */
+    A->print_inverse("Memo", 0, 0, false, true, 127);
+    
+    /* Display menu items with 2 columns: Name + Frequency */
+    for (uint8_t i = g.scroll; i < g.scroll + 4 && i < NUM_FREQ_ITEMS; i++) {
+        uint8_t line = 1 + (i - g.scroll);
+        const char *item = freq_items[i];
+        
+        /* Parse item: find comma separator */
+        const char *comma = item;
+        while (*comma && *comma != ',') comma++;
+        
+        /* Calculate positions */
+        uint8_t y_pos = 8 + line * 8;  /* Tiny font line spacing */
+        
+        if (i == g.selected_item) {
+            /* Selected item: show ">" at column 0, then name and frequency */
+            A->print_tiny(">", 0, y_pos, false, false);
+            
+            /* Print name (column 1) */
+            char name[20];
+            uint8_t j = 0;
+            while (j < 19 && item[j] && item[j] != ',') {
+                name[j] = item[j];
+                j++;
+            }
+            name[j] = '\0';
+            A->print_tiny(name, 10, y_pos, false, false);
+            
+            /* Print frequency (column 2 - fixed at position 70) */
+            if (*comma == ',') {
+                A->print_tiny(comma + 1, 70, y_pos, false, false);
+            }
+        } else {
+            /* Unselected item: show space then name and frequency */
+            A->print_tiny(" ", 0, y_pos, false, false);
+            
+            /* Print name (column 1) */
+            char name[20];
+            uint8_t j = 0;
+            while (j < 19 && item[j] && item[j] != ',') {
+                name[j] = item[j];
+                j++;
+            }
+            name[j] = '\0';
+            A->print_tiny(name, 10, y_pos, false, false);
+            
+            /* Print frequency (column 2 - fixed at position 70) */
+            if (*comma == ',') {
+                A->print_tiny(comma + 1, 70, y_pos, false, false);
+            }
+        }
+    }
+    
+    /* Scroll indicators */
+    if (g.scroll > 0) {
+        A->print_tiny("^", 120, 8, false, false);
+    }
+    if (g.scroll + 4 < (uint8_t)NUM_FREQ_ITEMS) {
+        A->print_tiny("v", 120, 34, false, false);
+    }
+    
+    /* Footer */
+    A->print_tiny("UP/DN:Move", 0, 50, false, false);
+    A->print_tiny("MENU:Select", 50, 50, false, false);
+    A->print_tiny("EXIT:Back", 100, 50, false, false);
+    
+    A->blit_status();
+    A->blit_full();
+}
+
+/* Draw the main screen with selected frequency using tiny font */
+static void draw_screen(void) {
+    const app_api_t *A = g.api;
+    
+    A->display_clear();
+    A->status_clear();
+    
+    /* Title */
+    A->print_inverse("Memo F4IAE", 0, 0, false, true, 127);
+    
+    /* Display selected frequency with tiny font and 2 columns */
+    if (g.selected_item < NUM_FREQ_ITEMS) {
+        const char *item = freq_items[g.selected_item];
+        
+        /* Parse the item */
+        const char *comma = item;
+        while (*comma && *comma != ',') comma++;
+        
+        /* Show name on line 2 (tiny font) */
+        char name[20];
+        uint8_t i = 0;
+        while (i < 19 && item[i] && item[i] != ',') {
+            name[i] = item[i];
+            i++;
+        }
+        name[i] = '\0';
+        A->print_tiny(">", 0, 16, false, false);
+        A->print_tiny(name, 10, 16, false, false);
+        
+        /* Show frequency on line 3 (tiny font) */
+        if (*comma == ',') {
+            A->print_tiny(comma + 1, 70, 16, false, false);
+        }
+        
+        /* Show item number on line 4 */
+        char num_str[8];
+        if (g.selected_item < 9) {
+            num_str[0] = '#';
+            num_str[1] = (char)('0' + g.selected_item + 1);
+            num_str[2] = '\0';
+        } else {
+            num_str[0] = '#';
+            num_str[1] = (char)('0' + (g.selected_item + 1) / 10);
+            num_str[2] = (char)('0' + (g.selected_item + 1) % 10);
+            num_str[3] = '\0';
+        }
+        A->print_tiny(num_str, 0, 24, false, false);
+        
+        /* Show full item again on line 5 */
+        A->print_tiny(item, 10, 24, false, false);
+    } else {
+        A->print_tiny("No selection", 10, 16, false, false);
+        A->print_tiny("Press MENU to select", 10, 24, false, false);
+    }
+    
+    /* Footer */
+    A->print_tiny("MENU:Menu", 0, 50, false, false);
+    A->print_tiny("EXIT:Back", 80, 50, false, false);
+    A->print_tiny(MEMO_VERSION, 110, 50, false, false);
+    
+    A->draw_battery();
+    A->blit_status();
+    A->blit_full();
+}
+
+/* Handle key presses in menu */
+static void handle_menu_keys(void) {
+    uint8_t key = g.api->get_key();
+    
+    /* Skip if no key or same as previous (key repeat) */
+    if (key == APP_KEY_INVALID || key == g.prevKey) {
+        g.prevKey = key;
+        return;
+    }
+    
+    g.prevKey = key;
+    
+    if (key == APP_KEY_UP) {
+        if (g.selected_item > 0) {
+            g.selected_item--;
+            if (g.selected_item < g.scroll) {
+                g.scroll = g.selected_item;
+            }
+        }
+    } else if (key == APP_KEY_DOWN) {
+        if (g.selected_item < NUM_FREQ_ITEMS - 1) {
+            g.selected_item++;
+            if (g.selected_item >= g.scroll + 4) {
+                g.scroll = g.selected_item - 3;
+            }
+        }
+    } else if (key == APP_KEY_MENU) {
+        /* Selection confirmed - exit menu */
+        g.in_menu = false;
+        g.prevKey = APP_KEY_INVALID;
+    } else if (key == APP_KEY_EXIT) {
+        /* Cancel - exit app */
+        g.running = false;
+        g.in_menu = false;
+    }
+}
+
+/* Handle key presses in main screen */
+static void handle_main_keys(void) {
+    uint8_t key = g.api->get_key();
+    
+    /* Skip if no key or same as previous */
+    if (key == APP_KEY_INVALID || key == g.prevKey) {
+        g.prevKey = key;
+        return;
+    }
+    
+    g.prevKey = key;
+    
+    if (key == APP_KEY_MENU) {
+        /* Open frequency menu */
+        g.in_menu = true;
+        g.scroll = 0;
+    } else if (key == APP_KEY_EXIT) {
+        g.running = false;
+    }
+}
+
+/* Entry point */
+__attribute__((section(".text.entry"),used))
+void app_main(const app_api_t *api) {
+    g.api = api;
+    g.running = true;
+    g.in_menu = true;  /* Start in frequency menu */
+    g.selected_item = 0;
+    g.scroll = 0;
+    g.prevKey = APP_KEY_INVALID;
+    
+    while (g.running) {
+        if (g.in_menu) {
+            handle_menu_keys();
+            draw_menu();
+        } else {
+            handle_main_keys();
+            draw_screen();
+        }
+        api->delay_ms(50);
+    }
+}

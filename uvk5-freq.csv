@@ -1,0 +1,41 @@
+Location,Name,Frequency,Duplex,Offset,Tone,rToneFreq,cToneFreq,DtcsCode,DtcsPolarity,Mode,TStep,Skip,Comment,Power
+1,RASEC85,145.475000,off,0.000000,Tone,85.4,85.4,023,N,FM,2.50,,Trafic ADRASEC 85 / entree transpondeurs - CTCSS 85.4,5.0W
+2,RASEC85B,145.212500,off,0.000000,Tone,85.4,85.4,023,N,FM,2.50,,Canal secondaire ADRASEC - CTCSS 85.4,5.0W
+3,TACTUHF,444.625000,off,0.000000,Tone,85.4,85.4,023,N,FM,2.50,,Reseau tactique interne ADRASEC 85 (portatifs Motorola),5.0W
+4,INTERSV,157.575000,off,0.000000,Tone,85.4,85.4,023,N,FM,2.50,,Liaisons inter-services ADRASEC 85 (Vertex) - ECOUTE SEULEMENT,5.0W
+5,F5ZWP_U,439.612500,-,9.400000,Tone,85.4,85.4,023,N,FM,2.50,,Transpondeur F5ZWP La Roche/Yon - TX 439.6125 / RX 430.2125 CTCSS 85.4,5.0W
+6,F5ZWQ_U,430.212500,+,9.400000,Tone,85.4,85.4,023,N,FM,2.50,,Transpondeur F5ZWQ Pouzauges - TX 430.2125 / RX 439.6125 CTCSS 85.4,5.0W
+7,F1ZOQRX,430.475000,off,0.000000,,100.0,100.0,023,N,FM,2.50,S,Relais DMR F1ZOQ La Roche/Yon (BrandMeister TG 20885) - ECOUTE bruit numerique uniquement,5.0W
+8,APRS,144.800000,off,0.000000,,100.0,100.0,023,N,FM,2.50,S,APRS France 1200 bds - ECOUTE,5.0W
+9,HF3760,3.760000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Urgence IARU R1 80m LSB - RX tres limite sur UV-K5,5.0W
+10,HF7110,7.110000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Urgence IARU R1 40m LSB - RX tres limite sur UV-K5,5.0W
+11,HF14300,14.300000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Urgence mondiale IARU 20m USB - RX tres limite sur UV-K5,5.0W
+12,DETRESSE,121.500000,off,0.000000,,100.0,100.0,023,N,AM,2.50,,BALISE DE DETRESSE SATER - AM RX SEULEMENT,5.0W
+13,MIL243,243.000000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Balise detresse militaire - AM RX SEULEMENT,5.0W
+14,SAR406A,406.025000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Cospas-Sarsat 406.025 (standard historique) - RX tres difficile,5.0W
+15,SAR406B,406.037000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Cospas-Sarsat 406.037 - RX tres difficile,5.0W
+16,VHF16,156.800000,off,0.000000,,100.0,100.0,023,N,FM,2.50,,MARINE Canal 16 detresse/appel CROSS Etel - RX SEULEMENT,5.0W
+17,VHF13,156.650000,off,0.000000,,100.0,100.0,023,N,FM,2.50,,MARINE Canal 13 securite port CROSS - RX SEULEMENT,5.0W
+18,VHF70,156.525000,off,0.000000,,100.0,100.0,023,N,FM,2.50,S,MARINE Canal 70 ASN/DSC numerique - RX SEULEMENT,5.0W
+19,VHF9,156.450000,off,0.000000,,100.0,100.0,023,N,FM,2.50,,MARINE Canal 9 plaisance port/marina - RX SEULEMENT,5.0W
+20,VHF80,156.025000,off,0.000000,,100.0,100.0,023,N,FM,2.50,,MARINE Canal 80 plaisance cote - RX SEULEMENT,5.0W
+21,AIS1,161.975000,off,0.000000,,100.0,100.0,023,N,FM,2.50,S,AIS 1 (canal 87B) - numerique GMSK ECOUTE activite uniquement,5.0W
+22,AIS2,162.025000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,AIS 2 (canal 88B) - numerique GMSK ECOUTE activite uniquement,5.0W
+23,NT-ATIS,126.930000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Nantes Atlantique LFRS ATIS - AM RX,5.0W
+24,NT-TWR,118.655000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Nantes Atlantique LFRS Tour - AM RX,5.0W
+25,NT-SOL,121.655000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Nantes Atlantique LFRS Sol - AM RX,5.0W
+26,NT-APP,124.250000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Nantes Atlantique LFRS Approche - AM RX (autres: 119.400 124.430),5.0W
+27,RY-AFIS,119.905000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,La Roche-sur-Yon Les Ajoncs LFRI AFIS - AM RX,5.0W
+28,LS-AFIS,123.350000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Les Sables-d'Olonne Talmont LFOO auto-info - AM RX,5.0W
+29,FC-AFIS,119.765000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Fontenay-le-Comte auto-info - AM RX,5.0W
+30,TR-TWR,118.100000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Tours Val de Loire LFOT Tour/AFIS - AM RX (zone Azay-le-Rideau),5.0W
+31,SA-AFIS,120.605000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Saumur St-Florent LFOD auto-info - AM RX,5.0W
+32,ULM1235,123.500000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Auto-info aerodromes par defaut - AM RX,5.0W
+33,ULM1253,125.335000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Auto-info bases ULM France (depuis avril 2023) - AM RX,5.0W
+34,FIS1228,122.800000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,Information de vol FIS 122.8 (100.275 egalement) - AM RX,5.0W
+35,ACARS1,131.725000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,ACARS canal principal Europe - AM RX (messages data audible en bruit),5.0W
+36,ACARS2,131.525000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,ACARS canal secondaire Europe - AM RX,5.0W
+37,ACARS3,136.900000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,ACARS canal complementaire - AM RX,5.0W
+38,ACARS4,130.025000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,ACARS canal USA/Canada - AM RX (vols long-courrier),5.0W
+39,ACARS5,129.125000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,ACARS canal USA/Canada - AM RX (vols long-courrier),5.0W
+40,VDL2,136.975000,off,0.000000,,100.0,100.0,023,N,AM,2.50,S,VDL Mode 2 Europe (remplace progressivement l'ACARS) - AM RX,5.0W
