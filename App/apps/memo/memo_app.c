@@ -116,19 +116,19 @@ static const char *freq_items[NUM_FREQ_ITEMS] = {
     "VDL2 136.975"
 };
 
-/* Draw frequency menu - EXACTLY like aprsrx */
+/* Draw frequency menu - Match standard app menu layout */
 static void draw_menu(void) {
     const app_api_t *A = g.api;
     
     A->display_clear();
     A->status_clear();
     
-    /* Title */
-    A->print_normal("Memo", 0, 127, 0);
+    /* Title - inverse at top */
+    A->print_inverse("Memo", 0, 0, false, true, 127);
     
-    /* Display 4 items */
-    for (uint8_t i = g.scroll; i < g.scroll + 4 && i < NUM_FREQ_ITEMS; i++) {
-        uint8_t line = 1 + (i - g.scroll);
+    /* Display 6 items starting from line 2 (2 empty lines under title) */
+    for (uint8_t i = g.scroll; i < g.scroll + 6 && i < NUM_FREQ_ITEMS; i++) {
+        uint8_t line = 2 + (i - g.scroll);
         const char *item = freq_items[i];
         
         if (i == g.selected_item) {
@@ -138,18 +138,18 @@ static void draw_menu(void) {
         }
     }
     
-    /* Scroll indicators - tiny font like aprsrx */
+    /* Scroll indicators - tiny font */
     if (g.scroll > 0) {
-        A->print_tiny("^", 120, 8, false, false);
+        A->print_tiny("^", 120, 16, false, false);
     }
-    if (g.scroll + 4 < NUM_FREQ_ITEMS) {
-        A->print_tiny("v", 120, 34, false, false);
+    if (g.scroll + 6 < NUM_FREQ_ITEMS) {
+        A->print_tiny("v", 120, 40, false, false);
     }
     
-    /* Footer - tiny font at y=50 like aprsrx */
-    A->print_tiny("UP/DN:Move", 0, 50, false, false);
-    A->print_tiny("MENU:Select+Set", 50, 50, false, false);
-    A->print_tiny("EXIT:Quit", 100, 50, false, false);
+    /* Footer - tiny font at y=50 */
+    A->print_tiny("UP/DN", 0, 50, false, false);
+    A->print_tiny("MENU:Sel", 40, 50, false, false);
+    A->print_tiny("EXIT:Quit", 80, 50, false, false);
     
     A->blit_status();
     A->blit_full();
@@ -176,8 +176,8 @@ static void handle_menu_keys(void) {
     } else if (key == APP_KEY_DOWN) {
         if (g.selected_item < NUM_FREQ_ITEMS - 1) {
             g.selected_item++;
-            if (g.selected_item >= g.scroll + 4) {
-                g.scroll = g.selected_item - 3;
+            if (g.selected_item >= g.scroll + 6) {
+                g.scroll = g.selected_item - 5;
             }
         }
     } else if (key == APP_KEY_MENU) {
