@@ -16,7 +16,7 @@
 
 /**
  * Memo App - Frequency Selector
- * Based on APRS RX minimal menu style
+ * Simple menu matching standard app menu layout EXACTLY
  */
 
 #include <stdint.h>
@@ -30,7 +30,6 @@
 static struct {
     const app_api_t *api;
     bool running;
-    bool in_menu;
     uint8_t selected_item;
     uint8_t scroll;
     uint8_t prevKey;
@@ -40,10 +39,7 @@ static struct {
 void *memset(void *d, int c, size_t n) {
     uint8_t *p = d; while (n) p[--n] = (uint8_t)c; return d;
 }
-void *memcpy(void *d, const void *s, size_t n) {
-    uint8_t *p = d; const uint8_t *q = s;
-    while (n) { --n; p[n] = q[n]; } return d;
-}
+
 char *strcpy(char *dest, const char *src) {
     char *d = dest;
     while ((*d++ = *src++));
@@ -121,45 +117,47 @@ static const char *freq_items[NUM_FREQ_ITEMS] = {
     "VDL2 136.975"
 };
 
-/* Draw frequency menu - Single font with > cursor */
+/* Draw frequency menu */
 static void draw_menu(void) {
     const app_api_t *A = g.api;
     
     A->display_clear();
     A->status_clear();
     
-    /* Title - inverse at top */
+    /* Title - inverse at line 0 */
     A->print_inverse("Memo", 0, 0, false, true, 127);
     
-    /* Display 6 items starting from line 2 (2 empty lines under title) */
-    for (uint8_t i = g.scroll; i < g.scroll + 6 && i < NUM_FREQ_ITEMS; i++) {
-        uint8_t line = 2 + (i - g.scroll);
-        const char *item = freq_items[i];
+    /* Display 5 items starting from line 1 (like standard app menu) */
+    for (uint8_t i = 0; i < 5; i++) {
+        uint8_t item_idx = g.scroll + i;
+        uint8_t line = 1 + i;
         
-        /* Always use normal font, add > prefix for selected item */
-        if (i == g.selected_item) {
-            char buffer[40];
-            buffer[0] = '>';
-            buffer[1] = ' ';
-            strcpy(buffer + 2, item);
-            A->print_normal(buffer, 0, 127, line);
-        } else {
-            A->print_normal(item, 0, 127, line);
+        if (item_idx < NUM_FREQ_ITEMS) {
+            const char *item = freq_items[item_idx];
+            
+            if (item_idx == g.selected_item) {
+                char buffer[40];
+                buffer[0] = '>';
+                buffer[1] = ' ';
+                strcpy(buffer + 2, item);
+                A->print_normal(buffer, 0, 127, line);
+            } else {
+                A->print_normal(item, 0, 127, line);
+            }
         }
     }
     
-    /* Scroll indicators - tiny font */
+    /* Scroll indicators - tiny font at same positions as app_menu.c */
     if (g.scroll > 0) {
-        A->print_tiny("^", 120, 16, false, false);
+        A->print_tiny("^", 120, 8, false, false);
     }
-    if (g.scroll + 6 < NUM_FREQ_ITEMS) {
-        A->print_tiny("v", 120, 40, false, false);
+    if (g.scroll + 5 < NUM_FREQ_ITEMS) {
+        A->print_tiny("v", 120, 34, false, false);
     }
     
-    /* Footer - tiny font at y=50 */
-    A->print_tiny("UP/DN", 0, 50, false, false);
-    A->print_tiny("MENU:Sel", 40, 50, false, false);
-    A->print_tiny("EXIT:Quit", 80, 50, false, false);
+    /* Footer - minimal, tiny at y=50 */
+    A->print_tiny("MENU:Sel", 0, 50, false, false);
+    A->print_tiny("EXIT:Quit", 60, 50, false, false);
     
     A->blit_status();
     A->blit_full();
@@ -186,8 +184,8 @@ static void handle_menu_keys(void) {
     } else if (key == APP_KEY_DOWN) {
         if (g.selected_item < NUM_FREQ_ITEMS - 1) {
             g.selected_item++;
-            if (g.selected_item >= g.scroll + 6) {
-                g.scroll = g.selected_item - 5;
+            if (g.selected_item >= g.scroll + 5) {
+                g.scroll = g.selected_item - 4;
             }
         }
     } else if (key == APP_KEY_MENU) {
@@ -215,7 +213,6 @@ __attribute__((section(".text.entry"),used))
 void app_main(const app_api_t *api) {
     g.api = api;
     g.running = true;
-    g.in_menu = true;
     g.selected_item = 0;
     g.scroll = 0;
     g.prevKey = APP_KEY_INVALID;
