@@ -44,6 +44,11 @@ void *memcpy(void *d, const void *s, size_t n) {
     uint8_t *p = d; const uint8_t *q = s;
     while (n) { --n; p[n] = q[n]; } return d;
 }
+char *strcpy(char *dest, const char *src) {
+    char *d = dest;
+    while ((*d++ = *src++));
+    return dest;
+}
 
 /* Parse frequency string to uint32_t (x10 Hz) */
 static uint32_t parse_frequency(const char *freq_str) {
@@ -116,7 +121,7 @@ static const char *freq_items[NUM_FREQ_ITEMS] = {
     "VDL2 136.975"
 };
 
-/* Draw frequency menu - Match standard app menu layout */
+/* Draw frequency menu - Single font with > cursor */
 static void draw_menu(void) {
     const app_api_t *A = g.api;
     
@@ -131,8 +136,13 @@ static void draw_menu(void) {
         uint8_t line = 2 + (i - g.scroll);
         const char *item = freq_items[i];
         
+        /* Always use normal font, add > prefix for selected item */
         if (i == g.selected_item) {
-            A->print_inverse(item, 0, line, false, true, 127);
+            char buffer[40];
+            buffer[0] = '>';
+            buffer[1] = ' ';
+            strcpy(buffer + 2, item);
+            A->print_normal(buffer, 0, 127, line);
         } else {
             A->print_normal(item, 0, 127, line);
         }
